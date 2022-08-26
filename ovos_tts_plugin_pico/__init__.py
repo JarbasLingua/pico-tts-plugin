@@ -26,10 +26,18 @@ class PicoTTS(TTS):
                          validator=PicoTTSValidator(self))
         if not self.voice:
             self.voice = get_voice_from_lang(self.lang)
+
+        # TODO support speed and pitch for nanotts
+        self.nanotts = find_executable("nanotts")
         self.pico2wave = find_executable("pico2wave")
         self.picotts = find_executable("pico-tts")
-        if not self.pico2wave and not self.picotts:
+        if not self.nanotts and not self.pico2wave and not self.picotts:
             raise RuntimeError("pico2wave/pico-tts executable not found")
+
+    def get_nanotts(self, sentence, wav_file, voice):
+        subprocess.call(
+            [self.nanotts, '-v', voice, "-o", wav_file, sentence])
+        return wav_file
 
     def get_pico2wave(self, sentence, wav_file, voice):
         subprocess.call(
@@ -55,7 +63,9 @@ class PicoTTS(TTS):
             voice = get_voice_from_lang(lang) or self.voice
         else:
             voice = self.voice
-        if self.pico2wave:
+        if self.nanotts:
+            wav_file = self.get_nanotts(sentence, wav_file, voice)
+        elif self.pico2wave:
             wav_file = self.get_pico2wave(sentence, wav_file, voice)
         else:
             wav_file = self.get_picotts(sentence, wav_file, voice)
@@ -85,7 +95,8 @@ class PicoTTSValidator(TTSValidator):
 
     def validate_connection(self):
         if not find_executable("pico2wave") and \
-                not find_executable("pico-tts"):
+                not find_executable("pico-tts") and \
+                not find_executable("nanotts"):
             raise Exception(
                 'PicoTTS is not installed. Run: '
                 '\nsudo apt-get install libttspico0\n'

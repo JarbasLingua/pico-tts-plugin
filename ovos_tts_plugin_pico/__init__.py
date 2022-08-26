@@ -95,7 +95,8 @@ class PicoTTSValidator(TTSValidator):
 
     def validate_connection(self):
         if not find_executable("pico2wave") and \
-                not find_executable("pico-tts"):
+                not find_executable("pico-tts") and \
+                not find_executable("nanotts"):
             raise Exception(
                 'PicoTTS is not installed. Run: '
                 '\nsudo apt-get install libttspico0\n'

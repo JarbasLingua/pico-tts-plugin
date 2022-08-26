@@ -36,7 +36,7 @@ class PicoTTS(TTS):
 
     def get_nanotts(self, sentence, wav_file, voice):
         subprocess.call(
-            [self.pico2wave, '-v', voice, "-o", wav_file, sentence])
+            [self.nanotts, '-v', voice, "-o", wav_file, sentence])
         return wav_file
 
     def get_pico2wave(self, sentence, wav_file, voice):

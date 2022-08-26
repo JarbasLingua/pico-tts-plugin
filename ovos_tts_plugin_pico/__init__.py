@@ -1,4 +1,5 @@
 import subprocess
+import wave
 from distutils.spawn import find_executable
 from ovos_plugin_manager.templates.tts import TTS, TTSValidator
 
@@ -25,16 +26,39 @@ class PicoTTS(TTS):
                          validator=PicoTTSValidator(self))
         if not self.voice:
             self.voice = get_voice_from_lang(self.lang)
-        self.pico = find_executable("pico2wave")
+        self.pico2wave = find_executable("pico2wave")
+        self.picotts = find_executable("pico-tts")
+        if not self.pico2wave and not self.picotts:
+            raise RuntimeError("pico2wave/pico-tts executable not found")
+
+    def get_pico2wave(self, sentence, wav_file, voice):
+        subprocess.call(
+            [self.pico2wave, '-l', voice, "-w", wav_file, sentence])
+        return wav_file
+
+    def get_picotts(self, sentence, wav_file, voice):
+        # uncompressed PCM over stdout. PCM_U8
+        # Pipe to aplay -q -f S16_LE -r 16 to listen to it, or redirect to a file
+        p = subprocess.Popen([self.picotts, '-l', voice],
+                             stdin=subprocess.PIPE,
+                             stdout=subprocess.PIPE)
+        pcmdata, _ = p.communicate(sentence.encode("utf-8"))
+
+        with wave.open(wav_file, 'wb') as f:
+            f.setparams((1, 2, 16000, 0, 'NONE', 'NONE'))
+            f.writeframes(pcmdata)
+
+        return wav_file
 
     def get_tts(self, sentence, wav_file, lang=None):
         if lang:
             voice = get_voice_from_lang(lang) or self.voice
         else:
             voice = self.voice
-        subprocess.call(
-            [self.pico, '-l', voice, "-w", wav_file, sentence])
-
+        if self.pico2wave:
+            wav_file = self.get_pico2wave(sentence, wav_file, voice)
+        else:
+            wav_file = self.get_picotts(sentence, wav_file, voice)
         return wav_file, None
 
     @property
@@ -60,7 +84,8 @@ class PicoTTSValidator(TTSValidator):
             raise Exception('PicoTTS only supports ' + str(voices))
 
     def validate_connection(self):
-        if not find_executable("pico2wave"):
+        if not find_executable("pico2wave") and \
+                not find_executable("pico-tts"):
             raise Exception(
                 'PicoTTS is not installed. Run: '
                 '\nsudo apt-get install libttspico0\n'

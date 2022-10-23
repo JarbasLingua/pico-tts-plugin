@@ -1,6 +1,7 @@
 import subprocess
 import wave
 from distutils.spawn import find_executable
+
 from ovos_plugin_manager.templates.tts import TTS, TTSValidator
 
 
@@ -108,8 +109,7 @@ class PicoTTSValidator(TTSValidator):
 
 PicoTTSPluginConfig = {
     lang: [
-        {"voice": "default", "gender": "female", "lang": lang,
-         "display_name": f"Pico ({lang})", "offline": True, "priority": 60}
+        {"lang": lang, "meta": {"gender": "female", "display_name": f"Pico ({lang})", "offline": True, "priority": 60}}
     ] for lang in ["de", "es", "fr", "en", "it"]
 }
 
